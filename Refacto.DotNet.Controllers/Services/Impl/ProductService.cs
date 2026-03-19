@@ -3,36 +3,36 @@ using Refacto.DotNet.Controllers.Entities;
 
 namespace Refacto.DotNet.Controllers.Services.Impl
 {
-    public class ProductService
+    public class ProductService : IProductService
     {
-        private readonly INotificationService _ns;
-        private readonly AppDbContext _ctx;
+        private readonly INotificationService _notificationService;
+        private readonly AppDbContext _dbContext;
 
-        public ProductService(INotificationService ns, AppDbContext ctx)
+        public ProductService(INotificationService notificationService, AppDbContext dbContext)
         {
-            _ns = ns;
-            _ctx = ctx;
+            _notificationService = notificationService;
+            _dbContext = dbContext;
         }
 
         public void NotifyDelay(int leadTime, Product p)
         {
             p.LeadTime = leadTime;
-            _ = _ctx.SaveChanges();
-            _ns.SendDelayNotification(leadTime, p.Name);
+            _ = _dbContext.SaveChanges();
+            _notificationService.SendDelayNotification(leadTime, p.Name);
         }
 
         public void HandleSeasonalProduct(Product p)
         {
             if (DateTime.Now.AddDays(p.LeadTime) > p.SeasonEndDate)
             {
-                _ns.SendOutOfStockNotification(p.Name);
+                _notificationService.SendOutOfStockNotification(p.Name);
                 p.Available = 0;
-                _ = _ctx.SaveChanges();
+                _ = _dbContext.SaveChanges();
             }
             else if (p.SeasonStartDate > DateTime.Now)
             {
-                _ns.SendOutOfStockNotification(p.Name);
-                _ = _ctx.SaveChanges();
+                _notificationService.SendOutOfStockNotification(p.Name);
+                _ = _dbContext.SaveChanges();
             }
             else
             {
@@ -45,13 +45,13 @@ namespace Refacto.DotNet.Controllers.Services.Impl
             if (p.Available > 0 && p.ExpiryDate > DateTime.Now)
             {
                 p.Available -= 1;
-                _ = _ctx.SaveChanges();
+                _ = _dbContext.SaveChanges();
             }
             else
             {
-                _ns.SendExpirationNotification(p.Name, (DateTime)p.ExpiryDate);
+                _notificationService.SendExpirationNotification(p.Name, (DateTime)p.ExpiryDate);
                 p.Available = 0;
-                _ = _ctx.SaveChanges();
+                _ = _dbContext.SaveChanges();
             }
         }
     }

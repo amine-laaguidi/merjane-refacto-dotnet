@@ -5,17 +5,18 @@ using Moq;
 using Refacto.DotNet.Controllers.Database.Context;
 using Refacto.DotNet.Controllers.Entities;
 using Refacto.DotNet.Controllers.Services;
+using Refacto.DotNet.Controllers.Enums.ProductType;
 
 namespace Refacto.Dotnet.Controllers.Tests.Controllers
 {
     [Collection("Sequential")]
-    public class MyControllerIntegrationTests : IClassFixture<WebApplicationFactory<Program>>
+    public class OrdersControllerIntegrationTests : IClassFixture<WebApplicationFactory<Program>>
     {
         private readonly WebApplicationFactory<Program> _factory;
         private readonly AppDbContext _context;
         private readonly Mock<INotificationService> _mockNotificationService;
 
-        public MyControllerIntegrationTests(WebApplicationFactory<Program> factory)
+        public OrdersControllerIntegrationTests(WebApplicationFactory<Program> factory)
         {
             _mockNotificationService = new Mock<INotificationService>();
 
@@ -78,12 +79,12 @@ namespace Refacto.Dotnet.Controllers.Tests.Controllers
         {
             return new List<Product>
             {
-                new Product { LeadTime = 15, Available = 30, Type = "NORMAL", Name = "USB Cable" },
-                new Product { LeadTime = 10, Available = 0, Type = "NORMAL", Name = "USB Dongle" },
-                new Product { LeadTime = 15, Available = 30, Type = "EXPIRABLE", Name = "Butter", ExpiryDate = DateTime.Now.AddDays(26) },
-                new Product { LeadTime = 90, Available = 6, Type = "EXPIRABLE", Name = "Milk", ExpiryDate = DateTime.Now.AddDays(-2) },
-                new Product { LeadTime = 15, Available = 30, Type = "SEASONAL", Name = "Watermelon", SeasonStartDate = DateTime.Now.AddDays(-2), SeasonEndDate = DateTime.Now.AddDays(58) },
-                new Product { LeadTime = 15, Available = 30, Type = "SEASONAL", Name = "Grapes", SeasonStartDate = DateTime.Now.AddDays(180), SeasonEndDate = DateTime.Now.AddDays(240) }
+                new Product { LeadTime = 15, Available = 30, Type = ProductType.NORMAL, Name = "USB Cable" },
+                new Product { LeadTime = 10, Available = 0, Type = ProductType.NORMAL, Name = "USB Dongle" },
+                new Product { LeadTime = 15, Available = 30, Type = ProductType.EXPIRABLE, Name = "Butter", ExpiryDate = DateTime.Now.AddDays(26) },
+                new Product { LeadTime = 90, Available = 6, Type = ProductType.EXPIRABLE, Name = "Milk", ExpiryDate = DateTime.Now.AddDays(-2) },
+                new Product { LeadTime = 15, Available = 30, Type = ProductType.SEASONAL, Name = "Watermelon", SeasonStartDate = DateTime.Now.AddDays(-2), SeasonEndDate = DateTime.Now.AddDays(58) },
+                new Product { LeadTime = 15, Available = 30, Type = ProductType.SEASONAL, Name = "Grapes", SeasonStartDate = DateTime.Now.AddDays(180), SeasonEndDate = DateTime.Now.AddDays(240) }
             };
         }
     }

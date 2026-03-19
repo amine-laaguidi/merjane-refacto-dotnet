@@ -3,19 +3,20 @@ using Moq;
 using Moq.EntityFrameworkCore;
 using Refacto.DotNet.Controllers.Database.Context;
 using Refacto.DotNet.Controllers.Entities;
+using Refacto.DotNet.Controllers.Enums.ProductType;
 using Refacto.DotNet.Controllers.Services;
 using Refacto.DotNet.Controllers.Services.Impl;
 
 namespace Refacto.DotNet.Controllers.Tests.Services
 {
-    public class MyUnitTests
+    public class ProductServiceTests
     {
         private readonly Mock<INotificationService> _mockNotificationService;
         private readonly Mock<AppDbContext> _mockDbContext;
         private readonly Mock<DbSet<Product>> _mockDbSet;
         private readonly ProductService _productService;
 
-        public MyUnitTests()
+        public ProductServiceTests()
         {
             _mockNotificationService = new Mock<INotificationService>();
             _mockDbContext = new Mock<AppDbContext>();
@@ -25,14 +26,14 @@ namespace Refacto.DotNet.Controllers.Tests.Services
         }
 
         [Fact]
-        public void Test()
+        public void NotifyDelay_WhenProductAvailableIsZero_ShouldSaveAndSendDelayNotification()
         {
             // GIVEN
             Product product = new()
             {
                 LeadTime = 15,
                 Available = 0,
-                Type = "NORMAL",
+                Type = ProductType.NORMAL,
                 Name = "RJ45 Cable"
             };
 
