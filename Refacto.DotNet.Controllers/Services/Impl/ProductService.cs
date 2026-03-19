@@ -40,6 +40,11 @@ namespace Refacto.DotNet.Controllers.Services.Impl
             }
         }
 
+        public void HandleNormalProduct(Product p)
+        {
+            throw new NotImplementedException();
+        }
+
         public void HandleExpiredProduct(Product p)
         {
             if (p.Available > 0 && p.ExpiryDate > DateTime.Now)

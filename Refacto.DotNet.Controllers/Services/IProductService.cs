@@ -11,5 +11,7 @@ namespace Refacto.DotNet.Controllers.Services
         public void HandleSeasonalProduct(Product p);
 
         public void HandleExpiredProduct(Product p);
+
+        public void HandleNormalProduct(Product p);
     }
 }

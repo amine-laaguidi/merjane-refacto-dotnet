@@ -26,6 +26,48 @@ namespace Refacto.DotNet.Controllers.Tests.Services
         }
 
         [Fact]
+        public void HandleNormalProduct_WhenAvailableIsPositive_ShouldDecrementAvailableAndNotNotify()
+        {
+
+            Product product = new()
+            {
+                LeadTime = 10,
+                Available = 3,
+                Type = ProductType.NORMAL,
+                Name = "RJ45 Cable"
+            };
+
+
+            _productService.HandleNormalProduct(product);
+
+
+            Assert.Equal(2, product.Available);
+            _mockDbContext.Verify(ctx => ctx.SaveChanges(), Times.Once());
+            _mockNotificationService.Verify(service => service.SendDelayNotification(It.IsAny<int>(), It.IsAny<string>()), Times.Never());
+        }
+
+        [Fact]
+        public void HandleNormalProduct_WhenAvailableBecomesZero_ShouldSendDelayNotification()
+        {
+            
+            Product product = new()
+            {
+                LeadTime = 10,
+                Available = 1,
+                Type = ProductType.NORMAL,
+                Name = "RJ45 Cable"
+            };
+
+
+            _productService.HandleNormalProduct(product);
+
+
+            Assert.Equal(0, product.Available);
+            _mockDbContext.Verify(ctx => ctx.SaveChanges(), Times.Once());
+            _mockNotificationService.Verify(service => service.SendDelayNotification(product.LeadTime, product.Name), Times.Once());
+        }
+
+        [Fact]
         public void NotifyDelay_WhenProductAvailableIsZero_ShouldSaveAndSendDelayNotification()
         {
             // GIVEN
