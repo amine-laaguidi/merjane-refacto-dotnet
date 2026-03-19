@@ -42,7 +42,12 @@ namespace Refacto.DotNet.Controllers.Services.Impl
 
         public void HandleNormalProduct(Product p)
         {
-            throw new NotImplementedException();
+            p.Available -= 1;
+            _ = _dbContext.SaveChanges();
+            if (p.Available == 0)
+            {
+                _notificationService.SendDelayNotification(p.LeadTime, p.Name);
+            }
         }
 
         public void HandleExpiredProduct(Product p)
