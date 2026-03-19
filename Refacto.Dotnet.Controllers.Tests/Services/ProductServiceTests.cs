@@ -88,5 +88,53 @@ namespace Refacto.DotNet.Controllers.Tests.Services
             _mockDbContext.Verify(ctx => ctx.SaveChanges(), Times.Once());
             _mockNotificationService.Verify(service => service.SendDelayNotification(product.LeadTime, product.Name), Times.Once());
         }
+
+        [Fact]
+        public void HandleSeasonalProduct_WhenInSeasonAndAvailableIsPositive_ShouldDecrementAvailableAndNotNotify()
+        {
+            
+            Product product = new()
+            {
+                LeadTime = 5,
+                Available = 3,
+                Type = ProductType.SEASONAL,
+                Name = "Strawberry",
+                SeasonStartDate = DateTime.Now.AddDays(-10),
+                SeasonEndDate = DateTime.Now.AddDays(30)
+            };
+
+            
+            _productService.HandleSeasonalProduct(product);
+
+            
+            Assert.Equal(2, product.Available);
+            _mockDbContext.Verify(ctx => ctx.SaveChanges(), Times.Once());
+            _mockNotificationService.Verify(service => service.SendDelayNotification(It.IsAny<int>(), It.IsAny<string>()), Times.Never());
+            _mockNotificationService.Verify(service => service.SendOutOfStockNotification(It.IsAny<string>()), Times.Never());
+        }
+
+        [Fact]
+        public void HandleSeasonalProduct_WhenBeforeSeasonStart_ShouldSetAvailableToZeroAndSendOutOfStockNotification()
+        {
+            
+            Product product = new()
+            {
+                LeadTime = 5,
+                Available = 3,
+                Type = ProductType.SEASONAL,
+                Name = "Strawberry",
+                SeasonStartDate = DateTime.Now.AddDays(10),
+                SeasonEndDate = DateTime.Now.AddDays(90)
+            };
+
+            
+            _productService.HandleSeasonalProduct(product);
+
+            
+            Assert.Equal(0, product.Available);
+            _mockNotificationService.Verify(service => service.SendOutOfStockNotification(product.Name), Times.Once());
+            _mockNotificationService.Verify(service => service.SendDelayNotification(It.IsAny<int>(), It.IsAny<string>()), Times.Never());
+            _mockDbContext.Verify(ctx => ctx.SaveChanges(), Times.Once());
+        }
     }
 }
