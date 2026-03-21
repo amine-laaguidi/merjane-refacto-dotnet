@@ -36,15 +36,7 @@ namespace Refacto.DotNet.Controllers.Services.Impl
                     }
                     else if (p.Type == ProductType.EXPIRABLE)
                     {
-                        if (p.Available > 0 && p.ExpiryDate > DateTime.Now.Date)
-                        {
-                            p.Available -= 1;
-                            _ = _dbContext.SaveChanges();
-                        }
-                        else
-                        {
-                            _productService.HandleExpiredProduct(p);
-                        }
+                        _productService.HandleExpiredProduct(p);
                     }
                 }
         
