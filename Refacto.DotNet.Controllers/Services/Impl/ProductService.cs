@@ -1,4 +1,5 @@
-﻿using Refacto.DotNet.Controllers.Database.Context;
+﻿using Microsoft.EntityFrameworkCore;
+using Refacto.DotNet.Controllers.Database.Context;
 using Refacto.DotNet.Controllers.Entities;
 
 namespace Refacto.DotNet.Controllers.Services.Impl
@@ -12,13 +13,6 @@ namespace Refacto.DotNet.Controllers.Services.Impl
         {
             _notificationService = notificationService;
             _dbContext = dbContext;
-        }
-
-        public void NotifyDelay(int leadTime, Product p)
-        {
-            p.LeadTime = leadTime;
-            _ = _dbContext.SaveChanges();
-            _notificationService.SendDelayNotification(leadTime, p.Name);
         }
 
         public void HandleSeasonalProduct(Product p)
@@ -42,9 +36,12 @@ namespace Refacto.DotNet.Controllers.Services.Impl
 
         public void HandleNormalProduct(Product p)
         {
-            p.Available -= 1;
-            _ = _dbContext.SaveChanges();
-            if (p.Available == 0)
+            if (p.Available > 0)
+            {
+                p.Available -= 1;
+                _dbContext.SaveChanges();
+            }
+            else if (p.LeadTime > 0)
             {
                 _notificationService.SendDelayNotification(p.LeadTime, p.Name);
             }

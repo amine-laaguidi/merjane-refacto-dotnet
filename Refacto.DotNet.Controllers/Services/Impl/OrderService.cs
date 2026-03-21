@@ -28,20 +28,7 @@ namespace Refacto.DotNet.Controllers.Services.Impl
                 {
                     if (p.Type == ProductType.NORMAL)
                     {
-                        if (p.Available > 0)
-                        {
-                            p.Available -= 1;
-                            _dbContext.Entry(p).State = EntityState.Modified;
-                            _ = _dbContext.SaveChanges();
-                        }
-                        else
-                        {
-                            int leadTime = p.LeadTime;
-                            if (leadTime > 0)
-                            {
-                                _productService.NotifyDelay(leadTime, p);
-                            }
-                        }
+                        _productService.HandleNormalProduct(p);
                     }
                     else if (p.Type == ProductType.SEASONAL)
                     {
