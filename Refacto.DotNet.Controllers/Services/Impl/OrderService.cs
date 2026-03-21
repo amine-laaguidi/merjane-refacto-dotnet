@@ -32,15 +32,7 @@ namespace Refacto.DotNet.Controllers.Services.Impl
                     }
                     else if (p.Type == ProductType.SEASONAL)
                     {
-                        if (DateTime.Now.Date > p.SeasonStartDate && DateTime.Now.Date < p.SeasonEndDate && p.Available > 0)
-                        {
-                            p.Available -= 1;
-                            _ = _dbContext.SaveChanges();
-                        }
-                        else
-                        {
-                            _productService.HandleSeasonalProduct(p);
-                        }
+                        _productService.HandleSeasonalProduct(p);
                     }
                     else if (p.Type == ProductType.EXPIRABLE)
                     {
