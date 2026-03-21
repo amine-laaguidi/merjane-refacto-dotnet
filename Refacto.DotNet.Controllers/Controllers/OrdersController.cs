@@ -19,8 +19,15 @@ namespace Refacto.DotNet.Controllers.Controllers
         [ProducesResponseType(200)]
         public ActionResult<ProcessOrderResponse> ProcessOrder(long orderId)
         {
-            _orderService.ProcessOrder(orderId);
-            return new ProcessOrderResponse(orderId);
+            try
+            {
+                _orderService.ProcessOrder(orderId);
+                return new ProcessOrderResponse(orderId);
+            }
+            catch (InvalidOperationException)
+            {
+                return NotFound();
+            }
         }
     }
 }

@@ -20,17 +20,20 @@ namespace Refacto.DotNet.Controllers.Services.Impl
             if (DateTime.Now.AddDays(p.LeadTime) > p.SeasonEndDate || p.SeasonStartDate > DateTime.Now)
             {
                 _notificationService.SendOutOfStockNotification(p.Name);
-                p.Available = 0;
+                if (p.Available > 0)
+                {
+                    p.Available = 0;
+                    _ = _dbContext.SaveChanges();
+                }
+            }
+            else if (p.Available > 0)
+            {
+                p.Available -= 1;
                 _ = _dbContext.SaveChanges();
             }
             else
             {
-                p.Available -= 1;
-                _ = _dbContext.SaveChanges();
-                if (p.Available == 0)
-                {
-                    _notificationService.SendDelayNotification(p.LeadTime, p.Name);
-                }
+                _notificationService.SendDelayNotification(p.LeadTime, p.Name);
             }
         }
 
