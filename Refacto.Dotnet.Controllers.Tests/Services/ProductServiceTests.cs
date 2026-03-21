@@ -44,11 +44,11 @@ namespace Refacto.DotNet.Controllers.Tests.Services
             _mockNotificationService.Verify(service => service.SendDelayNotification(product.LeadTime, product.Name), Times.Never());
 
         }
-        
+
         [Fact]
         public void HandleNormalProduct_WhenAvailableIsZeroAndLeadTimeIsPositive_ShouldNotSaveAndShouldSendDelayNotification()
         {
-            
+
             Product product = new()
             {
                 LeadTime = 10,
@@ -134,7 +134,7 @@ namespace Refacto.DotNet.Controllers.Tests.Services
             _mockNotificationService.Verify(service => service.SendOutOfStockNotification(It.IsAny<string>()), Times.Never());
         }
 
-                [Fact]
+        [Fact]
         public void HandleSeasonalProduct_WhenAvailableIsZeroAndInSeasonAndLeadTimeOutOfSeason_ShouldNotSaveAndShouldSendOutOfStockNotification()
         {
 
@@ -155,12 +155,12 @@ namespace Refacto.DotNet.Controllers.Tests.Services
             _mockNotificationService.Verify(service => service.SendDelayNotification(product.LeadTime, product.Name), Times.Never());
             _mockNotificationService.Verify(service => service.SendOutOfStockNotification(product.Name), Times.Once());
         }
-        
+
 
         [Fact]
         public void HandleSeasonalProduct_WhenOutOfSeason_ShouldSetAvailableToZeroAndSendOutOfStockNotification()
         {
-            
+
             Product product = new()
             {
                 LeadTime = 5,
@@ -171,12 +171,67 @@ namespace Refacto.DotNet.Controllers.Tests.Services
                 SeasonEndDate = DateTime.Now.AddDays(90)
             };
 
-            
+
             _productService.HandleSeasonalProduct(product);
+
             Assert.Equal(0, product.Available);
             _mockNotificationService.Verify(service => service.SendOutOfStockNotification(product.Name), Times.Once());
             _mockNotificationService.Verify(service => service.SendDelayNotification(It.IsAny<int>(), It.IsAny<string>()), Times.Never());
             _mockDbContext.Verify(ctx => ctx.SaveChanges(), Times.Once());
+        }
+
+        [Fact]
+        public void HandleExpiredProduct_WhenAvailableIsPositiveAndExpiryDateIsInTheFuture_ShouldDecrementAvailableAndNotNotify()
+        {
+            Product product = new()
+            {
+                LeadTime = 5,
+                Available = 3,
+                Type = ProductType.EXPIRABLE,
+                ExpiryDate = DateTime.Now.AddDays(10)
+            };
+
+            _productService.HandleExpiredProduct(product);
+
+            Assert.Equal(2, product.Available);
+            _mockNotificationService.Verify(service => service.SendExpirationNotification(product.Name, product.ExpiryDate.Value), Times.Never());
+            _mockDbContext.Verify(ctx => ctx.SaveChanges(), Times.Once());
+        }
+
+        [Fact]
+        public void HandleExpiredProduct_WhenAvailableIsPositiveAndExpiryDateIsInThePast_ShouldSetAvailableToZeroAndSendExpirationNotification()
+        {
+            Product product = new()
+            {
+                LeadTime = 5,
+                Available = 3,
+                Type = ProductType.EXPIRABLE,
+                ExpiryDate = DateTime.Now.AddDays(-10)
+            };
+
+            _productService.HandleExpiredProduct(product);
+
+            Assert.Equal(0, product.Available);
+            _mockNotificationService.Verify(service => service.SendExpirationNotification(product.Name, product.ExpiryDate.Value), Times.Once());
+            _mockDbContext.Verify(ctx => ctx.SaveChanges(), Times.Once());
+        }
+
+        [Fact]
+        public void HandleExpiredProduct_WhenNotAvailableAndNotExpired_ShouldNotSaveAndShouldSendDelayNotification()
+        {
+            Product product = new()
+            {
+                LeadTime = 5,
+                Available = 0,
+                Type = ProductType.EXPIRABLE,
+                ExpiryDate = DateTime.Now.AddDays(10)
+            };
+
+            _productService.HandleExpiredProduct(product);
+
+            Assert.Equal(0, product.Available);
+            _mockNotificationService.Verify(service => service.SendExpirationNotification(product.Name, product.ExpiryDate.Value), Times.Never());
+            _mockDbContext.Verify(ctx => ctx.SaveChanges(), Times.Never());
         }
     }
 }

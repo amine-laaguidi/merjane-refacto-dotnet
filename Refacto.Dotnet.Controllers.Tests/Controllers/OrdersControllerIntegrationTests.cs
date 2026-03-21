@@ -131,6 +131,65 @@ namespace Refacto.Dotnet.Controllers.Tests.Controllers
             _mockNotificationService.Verify(s => s.SendDelayNotification(product.LeadTime, product.Name), Times.Never());
         }
 
+        [Fact]
+        public async Task ProcessOrder_ExpirableProduct_WhenAvailableIsPositiveAndExpiryDateIsInTheFuture_ShouldDecrementAvailable()
+        {
+            Product product = new() { LeadTime = 5, Available = 3, Type = ProductType.EXPIRABLE, Name = "Milk", ExpiryDate = DateTime.Now.AddDays(10) };
+            await SeedAndProcess(product);
+
+            Product? result = await _context.Products.FindAsync(product.Id);
+            Assert.Equal(2, result!.Available);
+            _mockNotificationService.Verify(s => s.SendExpirationNotification(product.Name, product.ExpiryDate.Value), Times.Never());
+        }
+
+        [Fact]
+        public async Task ProcessOrder_ExpirableProduct_WhenAvailableIsPositiveAndExpiryDateIsInThePast_ShouldSetAvailableToZeroAndSendExpirationNotification()
+        {
+            Product product = new() { LeadTime = 5, Available = 3, Type = ProductType.EXPIRABLE, Name = "Milk", ExpiryDate = DateTime.Now.AddDays(-10) };
+            await SeedAndProcess(product);
+
+            Product? result = await _context.Products.FindAsync(product.Id);
+
+            Assert.Equal(0, result!.Available);
+            _mockNotificationService.Verify(s => s.SendExpirationNotification(product.Name, product.ExpiryDate.Value), Times.Once());
+        }
+
+        [Fact]
+        public async Task ProcessOrder_ExpirableProduct_WhenAvailableIsZeroAndExpiryDateIsInTheFuture_ShouldNotSendExpirationNotification()
+        {
+            Product product = new() { LeadTime = 5, Available = 0, Type = ProductType.EXPIRABLE, Name = "Milk", ExpiryDate = DateTime.Now.AddDays(10) };
+            await SeedAndProcess(product);
+
+            Product? result = await _context.Products.FindAsync(product.Id);
+
+            Assert.Equal(0, result!.Available);
+            _mockNotificationService.Verify(s => s.SendExpirationNotification(product.Name, product.ExpiryDate.Value), Times.Never());
+        }
+
+        [Fact]
+        public async Task ProcessOrder_ExpirableProduct_WhenAvailableIsZeroAndExpiryDateIsInThePast_ShouldSetAvailableToZeroAndSendExpirationNotification()
+        {
+            Product product = new() { LeadTime = 5, Available = 0, Type = ProductType.EXPIRABLE, Name = "Milk", ExpiryDate = DateTime.Now.AddDays(-10) };
+            await SeedAndProcess(product);
+
+            Product? result = await _context.Products.FindAsync(product.Id);
+
+            Assert.Equal(0, result!.Available);
+            _mockNotificationService.Verify(s => s.SendExpirationNotification(product.Name, product.ExpiryDate.Value), Times.Once());
+        }
+
+        [Fact]
+        public async Task ProcessOrder_ExpirableProduct_WhenNotAvailableAndNotExpired_ShouldNotSaveAndShouldSendDelayNotification()
+        {
+            Product product = new() { LeadTime = 5, Available = 0, Type = ProductType.EXPIRABLE, Name = "Milk", ExpiryDate = DateTime.Now.AddDays(10) };
+            await SeedAndProcess(product);
+
+            Product? result = await _context.Products.FindAsync(product.Id);
+
+            Assert.Equal(0, result!.Available);
+            _mockNotificationService.Verify(s => s.SendExpirationNotification(product.Name, product.ExpiryDate.Value), Times.Never());
+        }
+
         private async Task SeedAndProcess(Product product)
         {
             HttpClient client = _factory.CreateClient();
