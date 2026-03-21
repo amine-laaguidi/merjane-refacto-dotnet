@@ -50,42 +50,98 @@ namespace Refacto.Dotnet.Controllers.Tests.Controllers
             _context.Database.EnsureCreated();
         }
 
+        // NORMAL
         [Fact]
-        public async Task ProcessOrderShouldReturn()
+        public async Task ProcessOrder_NormalProduct_WhenAvailableIsPositive_ShouldDecrementAvailable()
+        {
+            Product product = new() { LeadTime = 10, Available = 3, Type = ProductType.NORMAL, Name = "USB Cable" };
+            await SeedAndProcess(product);
+
+            Product? result = await _context.Products.FindAsync(product.Id);
+            Assert.Equal(2, result!.Available);
+            _mockNotificationService.Verify(s => s.SendDelayNotification(It.IsAny<int>(), It.IsAny<string>()), Times.Never());
+        }
+
+        [Fact]
+        public async Task ProcessOrder_NormalProduct_WhenAvailableIsZeroAndLeadTimeIsPositive_ShouldSendDelayNotification()
+        {
+            Product product = new() { LeadTime = 10, Available = 0, Type = ProductType.NORMAL, Name = "USB Dongle" };
+            await SeedAndProcess(product);
+
+            Product? result = await _context.Products.FindAsync(product.Id);
+            Assert.Equal(0, result!.Available);
+            _mockNotificationService.Verify(s => s.SendDelayNotification(product.LeadTime, product.Name), Times.Once());
+        }
+
+        [Fact]
+        public async Task ProcessOrder_NormalProduct_WhenAvailableIsZeroAndLeadTimeIsZero_ShouldNotSendDelayNotification()
+        {
+            Product product = new() { LeadTime = 0, Available = 0, Type = ProductType.NORMAL, Name = "USB Dongle" };
+            await SeedAndProcess(product);
+
+            _mockNotificationService.Verify(s => s.SendDelayNotification(It.IsAny<int>(), It.IsAny<string>()), Times.Never());
+        }
+
+        // SEASONAL
+        [Fact]
+        public async Task ProcessOrder_SeasonalProduct_WhenInSeasonAndAvailableIsPositive_ShouldDecrementAvailable()
+        {
+            Product product = new() { LeadTime = 5, Available = 3, Type = ProductType.SEASONAL, Name = "Watermelon", SeasonStartDate = DateTime.Now.AddDays(-10), SeasonEndDate = DateTime.Now.AddDays(30) };
+            await SeedAndProcess(product);
+
+            Product? result = await _context.Products.FindAsync(product.Id);
+
+            Assert.Equal(2, result!.Available);
+            _mockNotificationService.Verify(s => s.SendOutOfStockNotification(It.IsAny<string>()), Times.Never());
+        }
+
+        [Fact]
+        public async Task ProcessOrder_SeasonalProduct_WhenOutOfSeason_ShouldSetAvailableToZeroAndSendOutOfStockNotification()
+        {
+            Product product = new() { LeadTime = 5, Available = 3, Type = ProductType.SEASONAL, Name = "Grapes", SeasonStartDate = DateTime.Now.AddDays(10), SeasonEndDate = DateTime.Now.AddDays(90) };
+            await SeedAndProcess(product);
+
+            Product? result = await _context.Products.FindAsync(product.Id);
+
+            Assert.Equal(0, result!.Available);
+            _mockNotificationService.Verify(s => s.SendOutOfStockNotification(product.Name), Times.Once());
+        }
+
+        [Fact]
+        public async Task ProcessOrder_SeasonalProduct_WhenLeadTimeExceedsSeason_ShouldSetAvailableToZeroAndSendOutOfStockNotification()
+        {
+            Product product = new() { LeadTime = 20, Available = 0, Type = ProductType.SEASONAL, Name = "Strawberry", SeasonStartDate = DateTime.Now.AddDays(-10), SeasonEndDate = DateTime.Now.AddDays(10) };
+            await SeedAndProcess(product);
+
+            Product? result = await _context.Products.FindAsync(product.Id);
+
+            Assert.Equal(0, result!.Available);
+            _mockNotificationService.Verify(s => s.SendOutOfStockNotification(product.Name), Times.Once());
+        }
+
+        [Fact]
+        public async Task ProcessOrder_SeasonalProduct_WhenAvailableBecomesZeroInSeason_ShouldSendDelayNotification()
+        {
+            Product product = new() { LeadTime = 5, Available = 1, Type = ProductType.SEASONAL, Name = "Strawberry", 
+                SeasonStartDate = DateTime.Now.AddDays(-10), SeasonEndDate = DateTime.Now.AddDays(30) };
+            await SeedAndProcess(product);
+
+            Product? result = await _context.Products.FindAsync(product.Id);
+            Assert.Equal(0, result!.Available);
+            _mockNotificationService.Verify(s => s.SendDelayNotification(product.LeadTime, product.Name), Times.Once());
+        }
+
+        private async Task SeedAndProcess(Product product)
         {
             HttpClient client = _factory.CreateClient();
-
-            List<Product> allProducts = CreateProducts();
-            HashSet<Product> orderItems = new(allProducts);
-            Order order = CreateOrder(orderItems);
-            await _context.Products.AddRangeAsync(allProducts);
+            Order order = new() { Items = new HashSet<Product> { product } };
+            await _context.Products.AddAsync(product);
             _ = await _context.Orders.AddAsync(order);
             _ = await _context.SaveChangesAsync();
             _context.ChangeTracker.Clear();
 
             HttpResponseMessage response = await client.PostAsync($"/orders/{order.Id}/processOrder", null);
             _ = response.EnsureSuccessStatusCode();
-
-            Order? resultOrder = await _context.Orders.FindAsync(order.Id);
-            Assert.Equal(resultOrder.Id, order.Id);
-        }
-
-        private static Order CreateOrder(HashSet<Product> products)
-        {
-            return new Order { Items = products };
-        }
-
-        private static List<Product> CreateProducts()
-        {
-            return new List<Product>
-            {
-                new Product { LeadTime = 15, Available = 30, Type = ProductType.NORMAL, Name = "USB Cable" },
-                new Product { LeadTime = 10, Available = 0, Type = ProductType.NORMAL, Name = "USB Dongle" },
-                new Product { LeadTime = 15, Available = 30, Type = ProductType.EXPIRABLE, Name = "Butter", ExpiryDate = DateTime.Now.AddDays(26) },
-                new Product { LeadTime = 90, Available = 6, Type = ProductType.EXPIRABLE, Name = "Milk", ExpiryDate = DateTime.Now.AddDays(-2) },
-                new Product { LeadTime = 15, Available = 30, Type = ProductType.SEASONAL, Name = "Watermelon", SeasonStartDate = DateTime.Now.AddDays(-2), SeasonEndDate = DateTime.Now.AddDays(58) },
-                new Product { LeadTime = 15, Available = 30, Type = ProductType.SEASONAL, Name = "Grapes", SeasonStartDate = DateTime.Now.AddDays(180), SeasonEndDate = DateTime.Now.AddDays(240) }
-            };
         }
     }
 }
