@@ -52,17 +52,21 @@ namespace Refacto.DotNet.Controllers.Services.Impl
 
         public void HandleExpiredProduct(Product p)
         {
-            if (p.Available > 0 && p.ExpiryDate > DateTime.Now)
+            if (p.ExpiryDate <= DateTime.Now.Date)
             {
-                p.Available -= 1;
-                _ = _dbContext.SaveChanges();
+                _notificationService.SendExpirationNotification(p.Name, (DateTime)p.ExpiryDate);
+                if (p.Available > 0)
+                {
+                    p.Available = 0;
+                    _ = _dbContext.SaveChanges();
+                }
             }
             else
             {
-                _notificationService.SendExpirationNotification(p.Name, (DateTime)p.ExpiryDate);
-                p.Available = 0;
-                _ = _dbContext.SaveChanges();
+                HandleNormalProduct(p);
             }
+            
+
         }
     }
 }
