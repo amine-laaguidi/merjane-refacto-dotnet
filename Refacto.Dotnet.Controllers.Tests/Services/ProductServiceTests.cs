@@ -13,20 +13,18 @@ namespace Refacto.DotNet.Controllers.Tests.Services
     {
         private readonly Mock<INotificationService> _mockNotificationService;
         private readonly Mock<AppDbContext> _mockDbContext;
-        private readonly Mock<DbSet<Product>> _mockDbSet;
-        private readonly ProductService _productService;
+        private IProductService _productService;
 
         public ProductServiceTests()
         {
             _mockNotificationService = new Mock<INotificationService>();
             _mockDbContext = new Mock<AppDbContext>();
-            _mockDbSet = new Mock<DbSet<Product>>();
-            _ = _mockDbContext.Setup(x => x.Products).ReturnsDbSet(Array.Empty<Product>());
+            _mockDbContext.Setup(x => x.Products).ReturnsDbSet(Array.Empty<Product>());
             _productService = new ProductService(_mockNotificationService.Object, _mockDbContext.Object);
         }
 
         [Fact]
-        public void HandleNormalProduct_WhenAvailableIsPositive_ShouldDecrementAvailableAndNotNotify()
+        public void HandleNormalProduct_WhenAvailableIsPositive_ShouldDecrementAvailableAndShouldSaveAndNotSendDelayNotification()
         {
 
             Product product = new()
@@ -43,17 +41,18 @@ namespace Refacto.DotNet.Controllers.Tests.Services
 
             Assert.Equal(2, product.Available);
             _mockDbContext.Verify(ctx => ctx.SaveChanges(), Times.Once());
-            _mockNotificationService.Verify(service => service.SendDelayNotification(It.IsAny<int>(), It.IsAny<string>()), Times.Never());
-        }
+            _mockNotificationService.Verify(service => service.SendDelayNotification(product.LeadTime, product.Name), Times.Never());
 
+        }
+        
         [Fact]
-        public void HandleNormalProduct_WhenAvailableBecomesZero_ShouldSendDelayNotification()
+        public void HandleNormalProduct_WhenAvailableIsZeroAndLeadTimeIsPositive_ShouldNotSaveAndShouldSendDelayNotification()
         {
             
             Product product = new()
             {
                 LeadTime = 10,
-                Available = 1,
+                Available = 0,
                 Type = ProductType.NORMAL,
                 Name = "RJ45 Cable"
             };
@@ -63,30 +62,30 @@ namespace Refacto.DotNet.Controllers.Tests.Services
 
 
             Assert.Equal(0, product.Available);
-            _mockDbContext.Verify(ctx => ctx.SaveChanges(), Times.Once());
+            _mockDbContext.Verify(ctx => ctx.SaveChanges(), Times.Never());
             _mockNotificationService.Verify(service => service.SendDelayNotification(product.LeadTime, product.Name), Times.Once());
         }
 
+        // REFACTOR: we don't have to save the product here, just notify the dela
         [Fact]
-        public void NotifyDelay_WhenProductAvailableIsZero_ShouldSaveAndSendDelayNotification()
+        public void HandleNormalProduct_WhenAvailableIsZeroAndLeadTimeZero_ShouldNotSaveAndShouldNotSendDelayNotification()
         {
-            // GIVEN
+            
             Product product = new()
             {
-                LeadTime = 15,
+                LeadTime = 0,
                 Available = 0,
                 Type = ProductType.NORMAL,
                 Name = "RJ45 Cable"
             };
 
-            // WHEN
-            _productService.NotifyDelay(product.LeadTime, product);
 
-            // THEN
+            _productService.HandleNormalProduct(product);
+
+
             Assert.Equal(0, product.Available);
-            Assert.Equal(15, product.LeadTime);
-            _mockDbContext.Verify(ctx => ctx.SaveChanges(), Times.Once());
-            _mockNotificationService.Verify(service => service.SendDelayNotification(product.LeadTime, product.Name), Times.Once());
+            _mockDbContext.Verify(ctx => ctx.SaveChanges(), Times.Never());
+            _mockNotificationService.Verify(service => service.SendDelayNotification(product.LeadTime, product.Name), Times.Never());
         }
 
         [Fact]
