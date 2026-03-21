@@ -120,7 +120,7 @@ namespace Refacto.Dotnet.Controllers.Tests.Controllers
         }
 
         [Fact]
-        public async Task ProcessOrder_SeasonalProduct_WhenAvailableBecomesZeroInSeason_ShouldSendDelayNotification()
+        public async Task ProcessOrder_SeasonalProduct_WhenAvailableIsPositiveAndInSeason_ShouldDecrementAvailable()
         {
             Product product = new() { LeadTime = 5, Available = 1, Type = ProductType.SEASONAL, Name = "Strawberry", 
                 SeasonStartDate = DateTime.Now.AddDays(-10), SeasonEndDate = DateTime.Now.AddDays(30) };
@@ -128,7 +128,7 @@ namespace Refacto.Dotnet.Controllers.Tests.Controllers
 
             Product? result = await _context.Products.FindAsync(product.Id);
             Assert.Equal(0, result!.Available);
-            _mockNotificationService.Verify(s => s.SendDelayNotification(product.LeadTime, product.Name), Times.Once());
+            _mockNotificationService.Verify(s => s.SendDelayNotification(product.LeadTime, product.Name), Times.Never());
         }
 
         private async Task SeedAndProcess(Product product)

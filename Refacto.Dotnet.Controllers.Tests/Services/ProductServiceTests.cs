@@ -158,7 +158,7 @@ namespace Refacto.DotNet.Controllers.Tests.Services
         
 
         [Fact]
-        public void HandleSeasonalProduct_WhenOutOfSeason_ShouldNotSaveAndShouldSendOutOfStockNotification()
+        public void HandleSeasonalProduct_WhenOutOfSeason_ShouldSetAvailableToZeroAndSendOutOfStockNotification()
         {
             
             Product product = new()
@@ -173,10 +173,10 @@ namespace Refacto.DotNet.Controllers.Tests.Services
 
             
             _productService.HandleSeasonalProduct(product);
-
+            Assert.Equal(0, product.Available);
             _mockNotificationService.Verify(service => service.SendOutOfStockNotification(product.Name), Times.Once());
             _mockNotificationService.Verify(service => service.SendDelayNotification(It.IsAny<int>(), It.IsAny<string>()), Times.Never());
-            _mockDbContext.Verify(ctx => ctx.SaveChanges(), Times.Never());
+            _mockDbContext.Verify(ctx => ctx.SaveChanges(), Times.Once());
         }
     }
 }
